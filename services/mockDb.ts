@@ -1,3 +1,4 @@
+
 import { ApartmentSearchFilters, Listing, Reservation } from '../types';
 
 const MOCK_LISTINGS: Listing[] = [
@@ -820,14 +821,17 @@ const MOCK_LISTINGS: Listing[] = [
 const RESERVATION_STORAGE_KEY = 'eburon_reservations';
 const LISTINGS_STORAGE_KEY = 'eburon_custom_listings';
 
-export const saveReservation = (listing: Listing): void => {
+export const saveReservation = (listing: Listing, customerDetails: { name: string; email: string; phone: string; message: string }): void => {
   const existing = getReservations();
   const newReservation: Reservation = {
     id: Math.random().toString(36).substr(2, 9),
     listingId: listing.id,
     listingName: listing.name,
     listingAddress: listing.address,
-    customerName: 'User-' + Math.floor(Math.random() * 1000), // Simulating logged-in user
+    customerName: customerDetails.name,
+    customerEmail: customerDetails.email,
+    customerPhone: customerDetails.phone,
+    message: customerDetails.message,
     date: new Date().toISOString(),
     status: 'pending'
   };

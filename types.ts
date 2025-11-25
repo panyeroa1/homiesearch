@@ -1,3 +1,4 @@
+
 export interface Listing {
   id: string;
   name: string;
@@ -20,6 +21,9 @@ export interface Reservation {
   listingName: string;
   listingAddress: string;
   customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  message: string;
   date: string;
   status: 'pending' | 'confirmed';
 }
