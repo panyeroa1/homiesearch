@@ -32,7 +32,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
   const [newListing, setNewListing] = useState<Partial<Listing>>({
       type: 'apartment',
       imageUrls: [],
-      petsAllowed: false
+      petsAllowed: false,
+      coordinates: { lat: 50.8503, lng: 4.3517 } // Default Brussels
   });
   const [createStep, setCreateStep] = useState(1);
   const [uploading, setUploading] = useState(false);
@@ -76,12 +77,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
           bedrooms: Number(newListing.bedrooms) || 1,
           petsAllowed: !!newListing.petsAllowed,
           isFavorite: false,
-          coordinates: { lat: 50.8503, lng: 4.3517 } // Default to Brussels center if no geo
+          coordinates: newListing.coordinates || { lat: 50.8503, lng: 4.3517 }
       };
 
       await addListing(listing);
       alert('Listing created successfully!');
-      setNewListing({ type: 'apartment', imageUrls: [], petsAllowed: false });
+      setNewListing({ 
+          type: 'apartment', 
+          imageUrls: [], 
+          petsAllowed: false,
+          coordinates: { lat: 50.8503, lng: 4.3517 }
+      });
       setCreateStep(1);
       setActiveTab('dashboard');
   };
@@ -329,6 +335,47 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
                                   className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none"
                                />
                            </div>
+                           
+                           {/* Coordinates Input (Conditional for House/Apartment) */}
+                           {(newListing.type === 'house' || newListing.type === 'apartment') && (
+                               <div className="grid grid-cols-2 gap-4">
+                                   <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
+                                       <input 
+                                          type="number"
+                                          step="any" 
+                                          value={newListing.coordinates?.lat || ''}
+                                          onChange={e => setNewListing({
+                                              ...newListing, 
+                                              coordinates: { 
+                                                  lng: newListing.coordinates?.lng || 4.3517, 
+                                                  lat: parseFloat(e.target.value) 
+                                              }
+                                          })}
+                                          placeholder="50.8503"
+                                          className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none"
+                                       />
+                                   </div>
+                                   <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
+                                       <input 
+                                          type="number"
+                                          step="any"
+                                          value={newListing.coordinates?.lng || ''}
+                                          onChange={e => setNewListing({
+                                              ...newListing, 
+                                              coordinates: { 
+                                                  lat: newListing.coordinates?.lat || 50.8503, 
+                                                  lng: parseFloat(e.target.value) 
+                                              }
+                                          })}
+                                          placeholder="4.3517"
+                                          className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 outline-none"
+                                       />
+                                   </div>
+                               </div>
+                           )}
+
                            <div className="grid grid-cols-2 gap-4">
                                <div>
                                    <label className="block text-sm font-medium text-slate-700 mb-1">Property Type</label>
