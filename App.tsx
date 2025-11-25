@@ -7,7 +7,8 @@ import { createAudioContext, parseUserUtterance } from './services/gemini';
 import { ApartmentSearchFilters, Listing } from './types';
 import { GoogleGenAI, LiveServerMessage, Modality, FunctionDeclaration, Type } from '@google/genai';
 
-// --- Helpers ---
+// --- Audio Helpers ---
+
 function base64ToBytes(base64: string): Uint8Array {
   const binaryString = atob(base64);
   const length = binaryString.length;
@@ -25,6 +26,32 @@ function bytesToBase64(bytes: Uint8Array): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+// Robust downsampler to ensure 16kHz input for Gemini
+function downsampleBuffer(buffer: Float32Array, inputRate: number, outputRate: number): Float32Array {
+  if (outputRate === inputRate) {
+      return buffer;
+  }
+  const sampleRateRatio = inputRate / outputRate;
+  const newLength = Math.round(buffer.length / sampleRateRatio);
+  const result = new Float32Array(newLength);
+  let offsetResult = 0;
+  let offsetBuffer = 0;
+  
+  while (offsetResult < result.length) {
+      const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+      // Simple averaging for downsampling (prevents aliasing better than skipping)
+      let accum = 0, count = 0;
+      for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+      }
+      result[offsetResult] = count > 0 ? accum / count : 0;
+      offsetResult++;
+      offsetBuffer = nextOffsetBuffer;
+  }
+  return result;
 }
 
 // --- Tool Definition ---
@@ -166,10 +193,15 @@ const App: React.FC = () => {
       const apiKey = process.env.API_KEY;
       if (!apiKey) throw new Error("API Key missing");
 
-      inputAudioContextRef.current = createAudioContext(16000);
-      outputAudioContextRef.current = createAudioContext(24000);
-      await inputAudioContextRef.current.resume();
-      await outputAudioContextRef.current.resume();
+      // Initialize Audio Contexts
+      // Input: Request 16k, but prepare to handle whatever the browser gives
+      inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      // Output: 24k is standard for Gemini responses
+      outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      
+      // Ensure contexts are running (vital for some browsers)
+      if (inputAudioContextRef.current.state === 'suspended') await inputAudioContextRef.current.resume();
+      if (outputAudioContextRef.current.state === 'suspended') await outputAudioContextRef.current.resume();
 
       const ai = new GoogleGenAI({ apiKey });
 
@@ -190,8 +222,6 @@ const App: React.FC = () => {
                       
                       const newFilters = { ...filtersRef.current, ...args };
                       setFilters(newFilters);
-                      // Update UI search query to reflect voice intent subtly or just keep voice state
-                      // We won't overwrite text input to avoid jarring changes while user might be typing
                       
                       const results = await loadListings(newFilters);
                       
@@ -216,6 +246,8 @@ const App: React.FC = () => {
                 const dataInt16 = new Int16Array(bytes.buffer);
                 const buffer = ctx.createBuffer(1, dataInt16.length, 24000);
                 const channelData = buffer.getChannelData(0);
+                
+                // Convert Int16 to Float32 [-1, 1]
                 for(let i=0; i<dataInt16.length; i++) {
                     channelData[i] = dataInt16[i] / 32768.0;
                 }
@@ -225,7 +257,10 @@ const App: React.FC = () => {
                 source.connect(ctx.destination);
                 
                 const currentTime = ctx.currentTime;
-                if (nextStartTimeRef.current < currentTime) nextStartTimeRef.current = currentTime;
+                // Schedule next chunk seamlessly
+                if (nextStartTimeRef.current < currentTime) {
+                    nextStartTimeRef.current = currentTime;
+                }
                 source.start(nextStartTimeRef.current);
                 nextStartTimeRef.current += buffer.duration;
                 
@@ -234,7 +269,7 @@ const App: React.FC = () => {
                 setAssistantReply("Homie is speaking...");
              }
 
-             // 3. Handle Input Transcription (Sync Voice -> Search Form)
+             // 3. Handle Input Transcription
              if (message.serverContent?.inputTranscription) {
                  const transcript = message.serverContent.inputTranscription.text;
                  if (transcript) {
@@ -242,9 +277,15 @@ const App: React.FC = () => {
                  }
              }
 
+             // 4. Handle Interruption
              if (message.serverContent?.interrupted) {
-                 sourcesRef.current.forEach(s => s.stop());
+                 console.log("Model interrupted");
+                 // Stop all currently playing audio sources
+                 sourcesRef.current.forEach(s => {
+                    try { s.stop(); } catch(e) {}
+                 });
                  sourcesRef.current.clear();
+                 // Reset time cursor
                  nextStartTimeRef.current = 0;
              }
           },
@@ -280,33 +321,52 @@ const App: React.FC = () => {
       setAssistantReply("Listening...");
 
       // Start Microphone Stream
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            autoGainControl: true,
+            noiseSuppression: true
+          } 
+      });
       mediaStreamRef.current = stream;
 
       if (!inputAudioContextRef.current) return;
+      
       const source = inputAudioContextRef.current.createMediaStreamSource(stream);
+      // Use 4096 buffer size for balance between latency and performance
       const scriptProcessor = inputAudioContextRef.current.createScriptProcessor(4096, 1, 1);
       processorRef.current = scriptProcessor;
 
       scriptProcessor.onaudioprocess = (e) => {
+          if (!activeSessionRef.current) return;
+
           const inputData = e.inputBuffer.getChannelData(0);
-          // Volume meter
+          
+          // Volume meter logic
           let sum = 0;
           for(let i=0; i<inputData.length; i++) sum += inputData[i] * inputData[i];
           setVolume(Math.sqrt(sum / inputData.length));
 
-          const l = inputData.length;
+          // 1. Resample if necessary (e.g. 48k -> 16k)
+          // Gemini Live expects 16kHz. If the context is 48k/44.1k, we MUST downsample.
+          const currentSampleRate = inputAudioContextRef.current?.sampleRate || 16000;
+          const resampledData = downsampleBuffer(inputData, currentSampleRate, 16000);
+
+          // 2. Convert to Int16 PCM
+          const l = resampledData.length;
           const int16 = new Int16Array(l);
           for (let i = 0; i < l; i++) {
-            int16[i] = inputData[i] * 32768;
+            // Clamp values to valid Int16 range [-32768, 32767] to prevent wrap-around distortion
+            const s = Math.max(-1, Math.min(1, resampledData[i]));
+            int16[i] = s < 0 ? s * 32768 : s * 32767;
           }
           
-          if (activeSessionRef.current) {
-              const base64Data = bytesToBase64(new Uint8Array(int16.buffer));
-              activeSessionRef.current.sendRealtimeInput({
-                media: { mimeType: 'audio/pcm;rate=16000', data: base64Data }
-              });
-          }
+          // 3. Send
+          const base64Data = bytesToBase64(new Uint8Array(int16.buffer));
+          activeSessionRef.current.sendRealtimeInput({
+            media: { mimeType: 'audio/pcm;rate=16000', data: base64Data }
+          });
       };
 
       source.connect(scriptProcessor);
