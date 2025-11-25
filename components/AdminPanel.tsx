@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getReservations, addListing } from '../services/mockDb';
+import { getReservations, addListing, uploadImage } from '../services/mockDb';
 import { Reservation, Listing } from '../types';
 
 interface AdminPanelProps {
@@ -21,10 +21,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  // Default to create-listing as requested
+  const [activeTab, setActiveTab] = useState<Tab>('create-listing');
   
   // Dashboard State
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loadingRes, setLoadingRes] = useState(false);
   
   // Create Listing State
   const [newListing, setNewListing] = useState<Partial<Listing>>({
@@ -33,6 +35,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
       petsAllowed: false
   });
   const [createStep, setCreateStep] = useState(1);
+  const [uploading, setUploading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,12 +47,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
     }
   };
 
-  const loadData = () => {
-    const data = getReservations();
-    setReservations(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const loadData = async () => {
+    setLoadingRes(true);
+    try {
+        const data = await getReservations();
+        setReservations(data);
+    } finally {
+        setLoadingRes(false);
+    }
   };
 
-  const handleSubmitListing = () => {
+  const handleSubmitListing = async () => {
       if (!newListing.name || !newListing.address || !newListing.price) {
           alert("Please fill in at least the Name, Address and Price.");
           return;
@@ -71,7 +79,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
           coordinates: { lat: 50.8503, lng: 4.3517 } // Default to Brussels center if no geo
       };
 
-      addListing(listing);
+      await addListing(listing);
       alert('Listing created successfully!');
       setNewListing({ type: 'apartment', imageUrls: [], petsAllowed: false });
       setCreateStep(1);
@@ -87,29 +95,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
       }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
+          setUploading(true);
           const files = Array.from(e.target.files);
           
-          const promises = files.map(file => {
-              return new Promise<string>((resolve, reject) => {
-                  const reader = new FileReader();
-                  reader.onload = (e) => {
-                      if (e.target?.result) {
-                          resolve(e.target.result as string);
-                      }
-                  };
-                  reader.onerror = reject;
-                  reader.readAsDataURL(file);
-              });
-          });
-
-          Promise.all(promises).then(base64Images => {
+          try {
+              const uploadPromises = files.map(file => uploadImage(file));
+              const uploadedUrls = await Promise.all(uploadPromises);
+              
               setNewListing(prev => ({
                   ...prev,
-                  imageUrls: [...(prev.imageUrls || []), ...base64Images]
+                  imageUrls: [...(prev.imageUrls || []), ...uploadedUrls]
               }));
-          }).catch(err => console.error("Error reading files", err));
+          } catch (error) {
+              console.error(error);
+              alert("Failed to upload images. Check your Supabase configuration.");
+          } finally {
+              setUploading(false);
+          }
       }
   };
 
@@ -232,7 +236,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
                            <button onClick={loadData} className="text-sm text-rose-600 font-medium hover:underline">Refresh</button>
                        </div>
                        <div className="overflow-x-auto">
-                           <table className="w-full text-sm text-left">
+                           {loadingRes ? (
+                               <div className="p-8 text-center text-slate-500">Loading...</div>
+                           ) : (
+                               <table className="w-full text-sm text-left">
                                <thead className="bg-slate-50 text-slate-500 uppercase font-medium">
                                    <tr>
                                        <th className="px-6 py-3">Property</th>
@@ -281,6 +288,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
                                    )}
                                </tbody>
                            </table>
+                           )}
                        </div>
                    </div>
                </div>
@@ -428,15 +436,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onBack }) => {
                            <div>
                                <label className="block text-sm font-medium text-slate-700 mb-2">Upload Your Own Photos</label>
                                <div className="flex items-center justify-center w-full">
-                                  <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                          <svg className="w-8 h-8 mb-3 text-slate-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
-                                          </svg>
-                                          <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                          <p className="text-xs text-slate-500">SVG, PNG, JPG or GIF</p>
-                                      </div>
-                                      <input id="dropzone-file" type="file" className="hidden" multiple accept="image/*" onChange={handleImageUpload} />
+                                  <label htmlFor="dropzone-file" className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors ${uploading ? 'border-rose-400 bg-rose-50 cursor-wait' : 'border-slate-300'}`}>
+                                      {uploading ? (
+                                          <div className="flex flex-col items-center justify-center">
+                                              <svg className="animate-spin h-8 w-8 text-rose-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                              </svg>
+                                              <p className="text-sm text-slate-500">Uploading to cloud...</p>
+                                          </div>
+                                      ) : (
+                                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                              <svg className="w-8 h-8 mb-3 text-slate-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                                                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                                              </svg>
+                                              <p className="mb-2 text-sm text-slate-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                              <p className="text-xs text-slate-500">SVG, PNG, JPG or GIF</p>
+                                          </div>
+                                      )}
+                                      <input id="dropzone-file" type="file" className="hidden" multiple accept="image/*" onChange={handleImageUpload} disabled={uploading} />
                                   </label>
                                </div>
                            </div>

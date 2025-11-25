@@ -419,6 +419,12 @@ const App: React.FC = () => {
     return <AdminPanel onBack={() => setCurrentView('explore')} />;
   }
 
+  const handleTogglePets = () => {
+      const newFilters = { ...filters, petsAllowed: !filters.petsAllowed };
+      setFilters(newFilters);
+      loadListings(newFilters);
+  };
+
   return (
     <div className="h-screen bg-white flex flex-col font-sans text-slate-900 overflow-hidden">
       
@@ -499,7 +505,7 @@ const App: React.FC = () => {
                     {/* Categories - Only show in List view for cleaner map */}
                     {!isMapView && (
                         <div className="flex-none px-6 pt-4 pb-2">
-                            <div className="flex gap-8 overflow-x-auto pb-4 scrollbar-hide border-b border-slate-100">
+                            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide border-b border-slate-100 items-center">
                                 {['Apartment', 'House', 'Studio', 'Villa', 'Loft'].map(cat => (
                                     <button 
                                         key={cat}
@@ -516,6 +522,19 @@ const App: React.FC = () => {
                                         <span className="text-xs font-semibold">{cat}</span>
                                     </button>
                                 ))}
+                                {/* Vertical Separator */}
+                                <div className="h-8 w-px bg-slate-200 mx-2"></div>
+                                
+                                {/* Pets Filter */}
+                                <button 
+                                    onClick={handleTogglePets}
+                                    className={`flex flex-col items-center gap-2 min-w-[64px] group transition-opacity ${filters.petsAllowed ? 'opacity-100 text-black border-b-2 border-black pb-2' : 'opacity-70 hover:opacity-100'}`}
+                                >
+                                    <div className="text-2xl opacity-60 group-hover:opacity-100 grayscale group-hover:grayscale-0">
+                                        🐾
+                                    </div>
+                                    <span className="text-xs font-semibold">Pets Allowed</span>
+                                </button>
                             </div>
                         </div>
                     )}

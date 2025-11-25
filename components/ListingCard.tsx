@@ -9,6 +9,7 @@ interface ListingCardProps {
 
 const ListingCard: React.FC<ListingCardProps> = ({ listing, onClick, onToggleFavorite }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [imgSrc, setImgSrc] = useState(listing.imageUrls[0]);
 
   return (
     <div 
@@ -19,7 +20,8 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onClick, onToggleFav
       <div className="relative aspect-square w-full rounded-xl bg-gray-200 overflow-hidden">
         <div className={`absolute inset-0 bg-gray-200 animate-pulse ${isImageLoaded ? 'hidden' : 'block'}`} />
         <img 
-          src={listing.imageUrls[0]} 
+          src={imgSrc}
+          onError={() => setImgSrc("https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80")}
           alt={listing.name} 
           loading="lazy"
           onLoad={() => setIsImageLoaded(true)}
