@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ListingCard from './components/ListingCard';
 import ListingDetails from './components/ListingDetails';
 import AdminPanel from './components/AdminPanel';
+import MapView from './components/MapView';
 import { searchListings } from './services/mockDb';
 import { createAudioContext, parseUserUtterance } from './services/gemini';
 import { ApartmentSearchFilters, Listing } from './types';
@@ -107,6 +108,7 @@ After using the tool, tell the user how many homes you found and ask if they wan
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('explore');
+  const [isMapView, setIsMapView] = useState(false);
 
   // --- State for Homes ---
   const [listings, setListings] = useState<Listing[]>([]);
@@ -460,14 +462,14 @@ const App: React.FC = () => {
       </div>
 
       {/* --- Main Content --- */}
-      <div className="flex-grow overflow-y-auto overflow-x-hidden relative">
+      <div className="flex-grow overflow-hidden relative flex flex-col">
         
         {/* Dynamic Voice Status Bar */}
         <div className={`
-             sticky top-0 z-10 w-full bg-gradient-to-b from-white via-white/95 to-transparent pt-4 pb-8 px-6 transition-all duration-500
-             ${isLiveActive ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none absolute'}
+             absolute top-0 z-30 w-full flex justify-center pt-4 pointer-events-none transition-all duration-500
+             ${isLiveActive ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'}
         `}>
-             <div className="max-w-md mx-auto bg-slate-900 text-white rounded-full px-6 py-3 shadow-xl flex items-center justify-between">
+             <div className="bg-slate-900 text-white rounded-full px-6 py-3 shadow-xl flex items-center justify-between gap-4 pointer-events-auto">
                 <div className="flex items-center gap-3">
                      <div className="flex gap-1 h-4 items-center">
                           {[...Array(4)].map((_, i) => (
@@ -489,93 +491,119 @@ const App: React.FC = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="px-6 pb-24 pt-4">
+        <div className="flex-1 overflow-y-auto relative">
             
             {/* EXPLORE TAB */}
             {currentView === 'explore' && (
-                <div className="max-w-7xl mx-auto">
-                    {/* Categories */}
-                    <div className="flex gap-8 overflow-x-auto pb-6 mb-4 scrollbar-hide border-b border-slate-100">
-                        {['Apartment', 'House', 'Studio', 'Villa', 'Loft'].map(cat => (
-                            <button 
-                                key={cat}
-                                onClick={() => setFilters({ ...filters, type: cat.toLowerCase() })}
-                                className={`flex flex-col items-center gap-2 min-w-[64px] group opacity-70 hover:opacity-100 transition-opacity ${filters.type?.includes(cat.toLowerCase()) ? 'opacity-100 text-black border-b-2 border-black pb-2' : ''}`}
-                            >
-                                <div className="text-2xl opacity-60 group-hover:opacity-100 grayscale group-hover:grayscale-0">
-                                   {cat === 'Apartment' && '🏢'}
-                                   {cat === 'House' && '🏡'}
-                                   {cat === 'Studio' && '🛋️'}
-                                   {cat === 'Villa' && '🏖️'}
-                                   {cat === 'Loft' && '🏙️'}
-                                </div>
-                                <span className="text-xs font-semibold">{cat}</span>
-                            </button>
-                        ))}
-                    </div>
+                <div className="h-full flex flex-col">
+                    {/* Categories - Only show in List view for cleaner map */}
+                    {!isMapView && (
+                        <div className="flex-none px-6 pt-4 pb-2">
+                            <div className="flex gap-8 overflow-x-auto pb-4 scrollbar-hide border-b border-slate-100">
+                                {['Apartment', 'House', 'Studio', 'Villa', 'Loft'].map(cat => (
+                                    <button 
+                                        key={cat}
+                                        onClick={() => setFilters({ ...filters, type: cat.toLowerCase() })}
+                                        className={`flex flex-col items-center gap-2 min-w-[64px] group opacity-70 hover:opacity-100 transition-opacity ${filters.type?.includes(cat.toLowerCase()) ? 'opacity-100 text-black border-b-2 border-black pb-2' : ''}`}
+                                    >
+                                        <div className="text-2xl opacity-60 group-hover:opacity-100 grayscale group-hover:grayscale-0">
+                                        {cat === 'Apartment' && '🏢'}
+                                        {cat === 'House' && '🏡'}
+                                        {cat === 'Studio' && '🛋️'}
+                                        {cat === 'Villa' && '🏖️'}
+                                        {cat === 'Loft' && '🏙️'}
+                                        </div>
+                                        <span className="text-xs font-semibold">{cat}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                    {/* Listings Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {isLoadingListings ? (
-                            [...Array(8)].map((_, i) => (
-                                <div key={i} className="animate-pulse">
-                                    <div className="bg-slate-200 rounded-xl aspect-square mb-2"></div>
-                                    <div className="h-4 bg-slate-200 rounded w-3/4 mb-1"></div>
-                                    <div className="h-4 bg-slate-200 rounded w-1/2"></div>
-                                </div>
-                            ))
-                        ) : listings.length > 0 ? (
-                            listings.map(l => (
-                                <ListingCard 
-                                    key={l.id} 
-                                    listing={l} 
-                                    onClick={setSelectedListing} 
-                                    onToggleFavorite={toggleFavorite}
-                                />
-                            ))
+                    {/* Listings Grid OR Map */}
+                    <div className="flex-1 relative">
+                        {isMapView ? (
+                            <MapView listings={listings} onSelectListing={setSelectedListing} />
                         ) : (
-                            <div className="col-span-full text-center py-20 text-slate-400">
-                                <p className="text-lg">No homes found matching these filters.</p>
-                                <button 
-                                    onClick={() => {
-                                        setFilters({ sortBy: 'default' });
-                                        setSearchQuery('');
-                                    }}
-                                    className="mt-4 text-rose-500 underline"
-                                >
-                                    Clear filters
-                                </button>
+                            <div className="px-6 py-6 max-w-7xl mx-auto">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-24">
+                                    {isLoadingListings ? (
+                                        [...Array(8)].map((_, i) => (
+                                            <div key={i} className="animate-pulse">
+                                                <div className="bg-slate-200 rounded-xl aspect-square mb-2"></div>
+                                                <div className="h-4 bg-slate-200 rounded w-3/4 mb-1"></div>
+                                                <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                                            </div>
+                                        ))
+                                    ) : listings.length > 0 ? (
+                                        listings.map(l => (
+                                            <ListingCard 
+                                                key={l.id} 
+                                                listing={l} 
+                                                onClick={setSelectedListing} 
+                                                onToggleFavorite={toggleFavorite}
+                                            />
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full text-center py-20 text-slate-400">
+                                            <p className="text-lg">No homes found matching these filters.</p>
+                                            <button 
+                                                onClick={() => {
+                                                    setFilters({ sortBy: 'default' });
+                                                    setSearchQuery('');
+                                                }}
+                                                className="mt-4 text-rose-500 underline"
+                                            >
+                                                Clear filters
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
+                        
+                        {/* Map Toggle Button (Floating) */}
+                        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+                            <button 
+                                onClick={() => setIsMapView(!isMapView)}
+                                className="bg-slate-900 text-white px-6 py-3 rounded-full font-semibold shadow-xl hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
+                            >
+                                {isMapView ? (
+                                    <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                          <path fillRule="evenodd" d="M3 6a3 3 0 0 1 3-3h2.25a3 3 0 0 1 3 3v2.25a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6Zm9.75 0a3 3 0 0 1 3-3H18a3 3 0 0 1 3 3v2.25a3 3 0 0 1-3 3h-2.25a3 3 0 0 1-3-3V6ZM3 15.75a3 3 0 0 1 3-3h2.25a3 3 0 0 1 3 3V18a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-2.25Zm9.75 0a3 3 0 0 1 3-3H18a3 3 0 0 1 3 3V18a3 3 0 0 1-3 3h-2.25a3 3 0 0 1-3-3v-2.25Z" clipRule="evenodd" />
+                                        </svg>
+                                        Show List
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                          <path fillRule="evenodd" d="M8.161 2.58a1.875 1.875 0 0 1 1.678 0l4.993 2.498c.106.052.23.052.336 0l3.869-1.935A1.875 1.875 0 0 1 21.75 4.82v12.485c0 .71-.401 1.36-1.037 1.677l-4.875 2.437a1.875 1.875 0 0 1-1.676 0l-4.994-2.497a.375.375 0 0 0-.336 0l-3.868 1.935A1.875 1.875 0 0 1 2.25 19.18V6.695c0-.71.401-1.36 1.036-1.677l4.875-2.437ZM9 6a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-1.5 0V6.75A.75.75 0 0 1 9 6Zm6 0a.75.75 0 0 1 .75.75v10.5a.75.75 0 0 1-1.5 0V6.75A.75.75 0 0 1 15 6Z" clipRule="evenodd" />
+                                        </svg>
+                                        Show Map
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* NEARBY TAB (Map Placeholder) */}
+            {/* NEARBY TAB (Redundant now, but kept for legacy structure if needed, or we can repurpose to just auto-show map) */}
             {currentView === 'nearby' && (
-                <div className="h-[70vh] w-full rounded-2xl bg-slate-100 flex items-center justify-center relative overflow-hidden border border-slate-200">
-                    <div className="absolute inset-0 opacity-20 bg-[url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Brussels_street_map.png')] bg-cover bg-center"></div>
-                    <div className="z-10 bg-white p-6 rounded-2xl shadow-xl max-w-sm text-center">
-                        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-xl font-bold mb-2">Searching Nearby</h2>
-                        <p className="text-slate-500 mb-4">Homie is scanning listings around your simulated location in Brussels.</p>
-                        <button onClick={() => setCurrentView('explore')} className="text-rose-600 font-semibold hover:underline">
-                            Back to List
-                        </button>
-                    </div>
+                <div className="h-full relative">
+                     <MapView listings={listings} onSelectListing={setSelectedListing} />
+                     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-md z-[400] text-sm font-semibold">
+                        Showing results near you
+                     </div>
                 </div>
             )}
 
             {/* MY HOME TAB (Favorites) */}
             {currentView === 'favorites' && (
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto px-6 py-8">
                     <h2 className="text-3xl font-bold mb-8">Your Saved Homes</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-24">
                          {listings.filter(l => l.isFavorite).length > 0 ? (
                              listings.filter(l => l.isFavorite).map(l => (
                                 <ListingCard 
@@ -608,24 +636,24 @@ const App: React.FC = () => {
       {/* --- Bottom Navigation --- */}
       <div className="flex-none bg-white border-t border-slate-200 py-3 flex justify-center gap-12 z-20">
           <button 
-             onClick={() => setCurrentView('explore')}
-             className={`flex flex-col items-center gap-1 ${currentView === 'explore' ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'}`}
+             onClick={() => { setCurrentView('explore'); setIsMapView(false); }}
+             className={`flex flex-col items-center gap-1 ${currentView === 'explore' && !isMapView ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'}`}
           >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={currentView === 'explore' ? 2.5 : 2} stroke="currentColor" className="w-6 h-6">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={currentView === 'explore' && !isMapView ? 2.5 : 2} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
               </svg>
               <span className="text-[10px] font-semibold">Explore</span>
           </button>
 
           <button 
-             onClick={() => setCurrentView('nearby')}
-             className={`flex flex-col items-center gap-1 ${currentView === 'nearby' ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'}`}
+             onClick={() => { setCurrentView('explore'); setIsMapView(true); }}
+             className={`flex flex-col items-center gap-1 ${currentView === 'nearby' || isMapView ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'}`}
           >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={currentView === 'nearby' ? 2.5 : 2} stroke="currentColor" className="w-6 h-6">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={currentView === 'nearby' || isMapView ? 2.5 : 2} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
               </svg>
-              <span className="text-[10px] font-semibold">Nearby</span>
+              <span className="text-[10px] font-semibold">Map</span>
           </button>
 
           <button 
@@ -644,7 +672,7 @@ const App: React.FC = () => {
           </button>
 
           <button 
-             onClick={() => setCurrentView('favorites')}
+             onClick={() => { setCurrentView('favorites'); setIsMapView(false); }}
              className={`flex flex-col items-center gap-1 ${currentView === 'favorites' ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'}`}
           >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={currentView === 'favorites' ? 2.5 : 2} stroke="currentColor" className="w-6 h-6">
