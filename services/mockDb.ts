@@ -13,7 +13,8 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'Beautiful loft with high ceilings and view of the historic towers.',
     bedrooms: 1,
     petsAllowed: false,
-    coordinates: { lat: 51.0543, lng: 3.7174 }
+    coordinates: { lat: 51.0543, lng: 3.7174 },
+    isFavorite: false
   },
   {
     id: '2',
@@ -27,7 +28,8 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'Renovated family home near the station. Includes a south-facing garden.',
     bedrooms: 3,
     petsAllowed: true,
-    coordinates: { lat: 51.2194, lng: 4.4025 }
+    coordinates: { lat: 51.2194, lng: 4.4025 },
+    isFavorite: false
   },
   {
     id: '3',
@@ -41,7 +43,8 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'Perfect for students. Close to university and public transport (Metro Delta).',
     bedrooms: 0,
     petsAllowed: false,
-    coordinates: { lat: 50.8224, lng: 4.3982 }
+    coordinates: { lat: 50.8224, lng: 4.3982 },
+    isFavorite: false
   },
   {
     id: '4',
@@ -55,7 +58,8 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'High-end finishing, view of the Sablon church, underground parking available.',
     bedrooms: 2,
     petsAllowed: true,
-    coordinates: { lat: 50.8405, lng: 4.3556 }
+    coordinates: { lat: 50.8405, lng: 4.3556 },
+    isFavorite: false
   },
   {
     id: '5',
@@ -69,7 +73,8 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'Charming authentic house near the Menin Gate. Needs some love but full of character.',
     bedrooms: 3,
     petsAllowed: true,
-    coordinates: { lat: 50.8503, lng: 2.8915 }
+    coordinates: { lat: 50.8503, lng: 2.8915 },
+    isFavorite: false
   },
   {
     id: '6',
@@ -83,7 +88,8 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'Affordable apartment inside the city walls. Quiet street.',
     bedrooms: 2,
     petsAllowed: true,
-    coordinates: { lat: 51.2093, lng: 3.2247 }
+    coordinates: { lat: 51.2093, lng: 3.2247 },
+    isFavorite: false
   },
   {
     id: '7',
@@ -97,13 +103,15 @@ const MOCK_LISTINGS: Listing[] = [
     description: 'Exclusive villa near the beach. High-end amenities and large garage.',
     bedrooms: 4,
     petsAllowed: true,
-    coordinates: { lat: 51.3468, lng: 3.2872 }
+    coordinates: { lat: 51.3468, lng: 3.2872 },
+    isFavorite: false
   }
 ];
 
 // --- Reservation Logic ---
 
-const STORAGE_KEY = 'eburon_reservations';
+const RESERVATION_STORAGE_KEY = 'eburon_reservations';
+const LISTINGS_STORAGE_KEY = 'eburon_custom_listings';
 
 export const saveReservation = (listing: Listing): void => {
   const existing = getReservations();
@@ -117,12 +125,31 @@ export const saveReservation = (listing: Listing): void => {
     status: 'pending'
   };
   
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, newReservation]));
+  localStorage.setItem(RESERVATION_STORAGE_KEY, JSON.stringify([...existing, newReservation]));
 };
 
 export const getReservations = (): Reservation[] => {
-  const data = localStorage.getItem(STORAGE_KEY);
+  const data = localStorage.getItem(RESERVATION_STORAGE_KEY);
   return data ? JSON.parse(data) : [];
+};
+
+// --- Listing Management Logic ---
+
+export const addListing = (newListing: Listing): void => {
+  const existingCustom = getCustomListings();
+  const updated = [newListing, ...existingCustom];
+  localStorage.setItem(LISTINGS_STORAGE_KEY, JSON.stringify(updated));
+};
+
+const getCustomListings = (): Listing[] => {
+  const data = localStorage.getItem(LISTINGS_STORAGE_KEY);
+  return data ? JSON.parse(data) : [];
+};
+
+const getAllListings = (): Listing[] => {
+  const custom = getCustomListings();
+  // Merge custom listings with mock listings
+  return [...custom, ...MOCK_LISTINGS];
 };
 
 // --- Search Logic ---
@@ -131,7 +158,7 @@ export async function searchListings(filters: ApartmentSearchFilters): Promise<L
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 300));
 
-  let results = [...MOCK_LISTINGS];
+  let results = getAllListings();
 
   if (filters.city) {
     const city = filters.city.toLowerCase();
