@@ -344,7 +344,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listing, onClose }) => 
             <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 animate-fade-in-up">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold text-slate-900">Confirm Booking</h2>
-                    <button onClick={() => setShowBookingForm(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                    <button onClick={() => setShowBookingForm(false)} className="p-2 hover:bg-slate-100 rounded-full" title="Close" aria-label="Close">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
