@@ -491,69 +491,10 @@ const ClientPortal: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-white relative">
-      {/* Header - Airbnb Style */}
-      <header className="flex-none border-b border-slate-200 bg-white sticky top-0 z-30">
-        <div className="max-w-[2520px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-black to-slate-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">E</span>
-              </div>
-              <span className="text-xl font-bold text-black hidden sm:block">eburon</span>
-            </div>
 
-            {/* Right side buttons */}
-            <div className="flex items-center gap-4">
-              {/* Be the Landlord */}
-              <a
-                href="/admin"
-                className="hidden md:block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
-              >
-                Be the Landlord
-              </a>
 
-              {/* Login/Profile */}
-              {user ? (
-                <button
-                  onClick={handleProfileClick}
-                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-full hover:shadow-md transition-shadow"
-                  title="Open Profile"
-                  aria-label="Open Profile"
-                >
-                  <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                  </svg>
-                  <div className="w-7 h-7 bg-gradient-to-br from-black to-slate-700 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-full hover:shadow-md transition-shadow"
-                  title="Sign In"
-                  aria-label="Sign In"
-                >
-                  <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                  </svg>
-                  <div className="w-7 h-7 bg-slate-600 rounded-full flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-none px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white z-20">
+      {/* Main Content Header */}
+      <div className="flex-none px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-30">
           <div className="flex items-center gap-2">
              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold font-mono">E</div>
              <span className="font-bold text-xl text-black tracking-tight hidden sm:block">Eburon Realty</span>
@@ -583,7 +524,15 @@ const ClientPortal: React.FC = () => {
               </button>
           </form>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+               {/* Be the Landlord */}
+               <a
+                 href="/admin"
+                 className="hidden md:block px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-full transition-colors"
+               >
+                 Be the Landlord
+               </a>
+
                <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 overflow-hidden cursor-pointer" onClick={handleProfileClick}>
                   <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'Guest'}`} alt="User" />
                </div>
@@ -800,7 +749,7 @@ const ClientPortal: React.FC = () => {
 
           <button 
              onClick={handleMicClick}
-             className={`relative -top-6 bg-black hover:bg-black text-white p-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 ${connectionStatus === 'connecting' ? 'animate-pulse' : ''}`}
+             className={`md:hidden relative -top-6 bg-black hover:bg-black text-white p-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 ${connectionStatus === 'connecting' ? 'animate-pulse' : ''}`}
           >
              {isLiveActive ? (
                  <div className="w-6 h-6 flex items-center justify-center">
