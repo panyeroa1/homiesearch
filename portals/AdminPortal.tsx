@@ -1,6 +1,5 @@
-```typescript
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import AdminAuth from '../components/admin/Auth';
 import Dashboard from '../components/admin/Dashboard';
@@ -12,6 +11,7 @@ import { LayoutDashboard, Users, Building, Wrench, LogOut } from 'lucide-react';
 const AdminPortal: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Check current session
@@ -29,53 +29,93 @@ const AdminPortal: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-      await supabase.auth.signOut();
-      navigate('/login');
+    await supabase.auth.signOut();
+    setUser(null);
+    navigate('/');
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600"></div>
       </div>
     );
   }
 
   if (!user) {
-    return <AdminAuth onAuthSuccess={() => {}} />;
+    return <AdminAuth onAuthSuccess={() => setUser(user)} />;
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-slate-100">
+      {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-rose-500">Eburon Admin</h1>
+        <div className="p-6 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center">
+              <span className="text-xl font-bold">E</span>
+            </div>
+            <div>
+              <h1 className="font-bold text-lg">Eburon</h1>
+              <p className="text-xs text-slate-400">Admin Portal</p>
+            </div>
+          </div>
         </div>
-        <nav className="mt-6 flex-1">
-          <Link to="/" className="flex items-center gap-3 py-2.5 px-4 rounded transition duration-200 hover:bg-slate-800 text-slate-300 hover:text-white">
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/users" className="flex items-center gap-3 py-2.5 px-4 rounded transition duration-200 hover:bg-slate-800 text-slate-300 hover:text-white">
-            <Users size={20} />
-            <span>Users</span>
-          </Link>
-          <Link to="/listings" className="flex items-center gap-3 py-2.5 px-4 rounded transition duration-200 hover:bg-slate-800 text-slate-300 hover:text-white">
-            <Building size={20} />
-            <span>Listings</span>
-          </Link>
-          <Link to="/maintenance" className="flex items-center gap-3 py-2.5 px-4 rounded transition duration-200 hover:bg-slate-800 text-slate-300 hover:text-white">
-            <Wrench size={20} />
-            <span>Maintenance</span>
-          </Link>
+
+        <nav className="flex-1 p-4">
+          <ul className="space-y-2">
+            <li>
+              <Link
+                to="/"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                <span>Dashboard</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/users"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <Users className="w-5 h-5" />
+                <span>Users</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/listings"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <Building className="w-5 h-5" />
+                <span>Listings</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/maintenance"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <Wrench className="w-5 h-5" />
+                <span>Maintenance</span>
+              </Link>
+            </li>
+          </ul>
         </nav>
-        <div className="p-4 border-t border-slate-800">
-            <button onClick={handleLogout} className="w-full text-left py-2 px-4 text-slate-400 hover:text-white transition-colors">
-                Sign Out
-            </button>
+
+        <div className="p-4 border-t border-slate-700">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors w-full text-left"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
         </div>
       </aside>
-      <main className="flex-1 overflow-y-auto p-8">
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/users" element={<UserManagement />} />
