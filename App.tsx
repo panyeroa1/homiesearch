@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import AdminPortal from './portals/AdminPortal';
 import ClientPortal from './portals/ClientPortal';
