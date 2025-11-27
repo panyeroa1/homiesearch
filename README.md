@@ -88,7 +88,7 @@ In Supabase Dashboard → Authentication → Users:
 
 1. Click "Add user"
 2. Email: `admin@eburon.ai`
-3. Password: `admin123`
+3. Password: `123456`
 4. Confirm creation
 
 Then in SQL Editor, add the user profile:
@@ -119,7 +119,7 @@ Visit:
 
 **Pre-filled in login form:**
 - Email: `admin@eburon.ai`
-- Password: `admin123`
+- Password: `123456`
 
 ## 📁 Project Structure
 

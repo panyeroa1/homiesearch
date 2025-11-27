@@ -4,7 +4,7 @@ import { supabase } from '../../services/supabase';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('admin@eburon.ai');
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
