@@ -141,7 +141,7 @@ const CreateListing: React.FC = () => {
           {categories.map(cat => (
             <button
               key={cat.id}
-              onClick={() => updateData({ type: cat.id })}
+              onClick={() => updateData({ type: cat.id as any })}
               className={`
                 flex flex-col items-start p-4 border rounded-xl transition-all hover:border-black
                 ${formData.type === cat.id ? 'border-black bg-slate-50 ring-1 ring-black' : 'border-slate-200'}
@@ -248,6 +248,8 @@ const CreateListing: React.FC = () => {
               <button 
                 onClick={() => removeImage(idx)}
                 className="absolute top-2 right-2 p-1 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Remove image"
+                title="Remove image"
               >
                 <X className="w-4 h-4" />
               </button>
