@@ -37,7 +37,7 @@ const AdminPortal: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
       </div>
     );
   }
@@ -49,11 +49,11 @@ const AdminPortal: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
-        <div className="p-6 border-b border-slate-700">
+      <aside className="w-64 bg-black text-white flex flex-col">
+        <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center">
-              <span className="text-xl font-bold">E</span>
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+              <span className="text-xl font-bold text-black">E</span>
             </div>
             <div>
               <h1 className="font-bold text-lg">Eburon</h1>
@@ -66,7 +66,7 @@ const AdminPortal: React.FC = () => {
           <ul className="space-y-2">
             <li>
               <Link
-                to="/"
+                to="" 
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <LayoutDashboard className="w-5 h-5" />
@@ -75,7 +75,7 @@ const AdminPortal: React.FC = () => {
             </li>
             <li>
               <Link
-                to="/users"
+                to="users"
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <Users className="w-5 h-5" />
@@ -84,7 +84,7 @@ const AdminPortal: React.FC = () => {
             </li>
             <li>
               <Link
-                to="/listings"
+                to="listings"
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <Building className="w-5 h-5" />
@@ -93,7 +93,7 @@ const AdminPortal: React.FC = () => {
             </li>
             <li>
               <Link
-                to="/maintenance"
+                to="maintenance"
                 className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <Wrench className="w-5 h-5" />
