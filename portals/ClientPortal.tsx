@@ -174,8 +174,12 @@ const ClientPortal: React.FC = () => {
       setListings(prev => prev.map(l => l.id === id ? { ...l, isFavorite: !l.isFavorite } : l));
   };
 
-  const handleUnderDev = (feature: string) => {
-    alert(`${feature} is currently under development.`);
+  const handleProfileClick = () => {
+    if (user) {
+      setShowProfile(true);
+    } else {
+      setShowLogin(true);
+    }
   };
 
   const handleProfileClick = () => {
@@ -730,8 +734,9 @@ const ClientPortal: React.FC = () => {
           </button>
 
           <button 
-            onClick={handleProfileClick} 
-            className={`flex flex-col items-center gap-1 ${currentView === 'profile' ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'}`}
+            onClick={handleProfileClick}
+            className={`flex flex-col items-center gap-1 ${currentView === 'profile' ? 'text-rose-600' : 'text-slate-600'}`}
+            aria-label="Profile"
           >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
