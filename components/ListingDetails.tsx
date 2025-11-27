@@ -69,7 +69,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listing, onClose }) => 
           
           {/* Header Mobile */}
           <div className="absolute top-4 left-4 z-10 sm:hidden">
-            <button onClick={onClose} className="p-2 bg-white rounded-full shadow-md hover:scale-105 transition-transform">
+            <button onClick={onClose} className="p-2 bg-white rounded-full shadow-md hover:scale-105 transition-transform" aria-label="Go back" title="Go back">
                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                </svg>
@@ -77,7 +77,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listing, onClose }) => 
           </div>
            {/* Header Desktop */}
            <div className="absolute top-4 right-4 z-10 hidden sm:block">
-            <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors">
+            <button onClick={onClose} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors" aria-label="Close" title="Close">
                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                </svg>
@@ -171,6 +171,8 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listing, onClose }) => 
                         <button 
                             onClick={() => setShowBookingForm(false)}
                             className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                            aria-label="Close"  
+                            title="Close"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-slate-500">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -178,7 +180,7 @@ const ListingDetails: React.FC<ListingDetailsProps> = ({ listing, onClose }) => 
                         </button>
                     </div>
 
-                    {!submitted ? (
+                    {!reserved ? (
                         <form onSubmit={handleSubmit} className="space-y-4 flex-1">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
