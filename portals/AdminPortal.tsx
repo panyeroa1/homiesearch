@@ -31,6 +31,7 @@ const AdminPortal: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [callState, setCallState] = useState<CallState>(CallState.IDLE);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showMobileDialer, setShowMobileDialer] = useState(false);
   const [audioVols, setAudioVols] = useState<{in: number, out: number}>({in: 0, out: 0});
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number>(0);
@@ -74,28 +75,36 @@ const AdminPortal: React.FC = () => {
     };
   }, []);
 
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
   useEffect(() => {
     if (currentUser) {
         const fetchData = async () => {
-            const [fetchedLeads, fetchedProperties, fetchedTasks, fetchedAgents] = await Promise.all([
-                db.getLeads(),
-                db.getProperties(),
-                db.getTasks(),
-                db.getAgents()
-            ]);
-            setLeads(fetchedLeads);
-            setProperties(fetchedProperties);
-            setTasks(fetchedTasks);
-            
-            // Setup agents list and ensure default is present
-            let allAgents = fetchedAgents;
-            if (fetchedAgents.length === 0) {
-                allAgents = [DEFAULT_AGENT_PERSONA];
-                // Optionally save default if DB was empty
-                db.createAgent(DEFAULT_AGENT_PERSONA);
+            try {
+                const [fetchedLeads, fetchedProperties, fetchedTasks, fetchedAgents] = await Promise.all([
+                    db.getLeads(),
+                    db.getProperties(),
+                    db.getTasks(),
+                    db.getAgents()
+                ]);
+                setLeads(fetchedLeads);
+                setProperties(fetchedProperties);
+                setTasks(fetchedTasks);
+                
+                // Setup agents list and ensure default is present
+                let allAgents = fetchedAgents;
+                if (fetchedAgents.length === 0) {
+                    allAgents = [DEFAULT_AGENT_PERSONA];
+                    // Optionally save default if DB was empty
+                    db.createAgent(DEFAULT_AGENT_PERSONA);
+                }
+                setAgents(allAgents);
+                setAgentPersona(allAgents[0]); // Default to first agent
+            } catch (error) {
+                console.error("Failed to fetch admin data", error);
+            } finally {
+                setIsLoadingData(false);
             }
-            setAgents(allAgents);
-            setAgentPersona(allAgents[0]); // Default to first agent
         };
         fetchData();
     }
@@ -355,8 +364,13 @@ const AdminPortal: React.FC = () => {
       }
   };
 
-  if (!currentUser) {
-      return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-400">Loading...</div>;
+  if (!currentUser || isLoadingData) {
+      return (
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            <span className="font-medium text-sm">Loading Admin Portal...</span>
+        </div>
+      );
   }
 
   return (
@@ -384,12 +398,48 @@ const AdminPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Phone Overlay */}
+      {/* Mobile CRM Layout (Full Width) */}
+      {isMobile && (
+         <div className="flex-1 h-full min-w-0">
+            <CRM 
+                leads={leads} 
+                properties={properties} 
+                onSelectLead={handleLeadSelect}
+                selectedLeadId={activeLead?.id || null}
+                onUpdateLead={handleUpdateLead}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                agentPersona={agentPersona}
+                onUpdateAgentPersona={setAgentPersona}
+                onSwitchUser={handleSwitchUser}
+                tasks={tasks}
+                onUpdateTask={handleUpdateTask}
+                agents={agents}
+                onAgentsChange={setAgents}
+                onToggleDialer={() => setShowMobileDialer(true)}
+            />
+         </div>
+      )}
+
+      {/* Phone Overlay / Sidebar */}
       <div className={`
         transition-all duration-500 ease-in-out shrink-0
-        ${isMobile ? 'w-full h-full absolute inset-0 z-50' : 'w-[420px] h-full border-l border-slate-200 bg-white shadow-2xl relative z-40 p-8 flex items-center justify-center'}
+        ${isMobile 
+            ? `fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 ${showMobileDialer ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}` 
+            : 'w-[420px] h-full border-l border-slate-200 bg-white shadow-2xl relative z-40 p-8 flex items-center justify-center'
+        }
       `}>
-         <div className={`${isMobile ? 'w-full h-full' : 'w-[360px] h-[720px]'} transition-all`}>
+         {/* Close Button for Mobile Overlay */}
+         {isMobile && (
+             <button 
+                onClick={() => setShowMobileDialer(false)}
+                className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg text-slate-500 hover:text-slate-800 z-50"
+             >
+                 <X className="w-6 h-6" />
+             </button>
+         )}
+
+         <div className={`${isMobile ? 'w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden h-[80vh]' : 'w-[360px] h-[720px]'} transition-all relative`}>
             <Dialer 
                 callState={callState}
                 onCallStart={startCall}
