@@ -4,7 +4,7 @@ export interface Recording {
   timestamp: number;
   duration: number; // in seconds
   url: string;
-  outcome: 'connected' | 'missed' | 'voicemail';
+  outcome: 'connected' | 'missed' | 'voicemail' | 'follow_up' | 'closed';
 }
 
 export interface Lead {
@@ -31,6 +31,7 @@ export interface Property {
 
 export enum CallState {
   IDLE = 'IDLE',
+  RINGING = 'RINGING',
   CONNECTING = 'CONNECTING',
   ACTIVE = 'ACTIVE',
   ENDED = 'ENDED',
@@ -93,40 +94,77 @@ export interface Message {
   threadId: string;
 }
 
-export interface BlandAIConfig {
-  phone_number: string;
-  voice: string;
-  wait_for_greeting: boolean;
-  record: boolean;
-  answered_by_enabled: boolean;
-  noise_cancellation: boolean;
-  interruption_threshold: number;
-  block_interruptions: boolean;
-  max_duration: number;
-  model: string;
-  memory_id: string;
-  language: string;
-  background_track: string;
-  endpoint: string;
-  voicemail_action: string;
-  isCallActive: boolean;
-  task: string;
-  first_sentence: string;
-  temperature: number;
+export interface Document {
+  id: string;
+  name: string;
+  type: 'PDF' | 'DOC' | 'IMG' | 'XLS';
+  size: string;
+  date: string;
+  category: 'Contracts' | 'Invoices' | 'Reports' | 'Plans';
+  sharedWith: UserRole[]; // Roles that can see this doc
+}
+
+export interface AgentPersona {
+  id?: string; // Optional for new creations, present for saved ones
+  name: string;
+  role: string;
+  tone: string;
+  languageStyle: string;
+  objectives: string[];
+  systemPrompt?: string;
+  voiceId?: string;
+  model?: string;
+  tools?: string[];
+  firstSentence?: string;
+}
+
+export interface Email {
+  id: string;
   from: string;
+  subject: string;
+  preview: string;
+  date: string;
+  read: boolean;
+  source: 'EMAIL' | 'WHATSAPP';
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  platform: 'Facebook' | 'Instagram' | 'Google';
+  status: 'Active' | 'Paused';
+  clicks: number;
+  spend: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  dueDate: string;
+  completed: boolean;
+  leadId?: string;
+  leadName?: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
+export interface Job {
+  id: string;
+  title: string;
+  date: string;
+  status: string;
+  address: string;
+}
+
+export interface BlandConfig {
+  voiceId: string;
+  fromNumber: string;
+  model: string;
+  language: string;
   tools: string[];
 }
 
-export interface Agent {
+export interface VoiceOption {
   id: string;
   name: string;
-  voice_id?: string;
-  intro?: string;
-  roles?: string;
-  prompt: string;
-  bland_config: BlandAIConfig;
-  created_by?: string;
-  created_at?: string;
-  updated_at?: string;
+  description: string;
 }
-
