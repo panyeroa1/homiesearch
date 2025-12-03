@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
-import { UserRole, User } from '../types';
+import { UserRole, User } from '../../types-admin-final';
 import { Building, User as UserIcon, Home, Wrench, Lock, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
-import { supabase } from '../supabaseClient';
-import { db } from '../services/db';
+import { supabase } from '../../supabaseClient';
+import { db } from '../../services/admin-final/db';
 
 interface AuthProps {
   onLogin: (user: User) => void;

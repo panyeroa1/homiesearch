@@ -125,3 +125,50 @@ Known limitations or follow-up tasks:
 - Consider adding validation for phone number formats
 - May want to add agent preview/test functionality before saving
 - Could add agent templates for common use cases
+
+------------------------------------------------------------
+
+Task ID: T-0002
+Title: Commit pending changes for Admin Portal and Voice Services
+Status: IN-PROGRESS
+Owner: Miles
+Related repo or service: homiesearch-5
+Branch: main
+Created: 2025-12-03 20:35
+Last updated: 2025-12-03 20:35
+
+START LOG
+
+Timestamp: 2025-12-03 20:35
+Current behavior or state:
+- There are multiple modified and untracked files in the repository.
+- Changes involve Admin Portal, CRM, Bland AI service, and Gemini services.
+- User requested to commit these changes before proceeding.
+
+Plan and scope for this task:
+- Stage all changes (git add .)
+- Commit changes with a descriptive message.
+
+Files or modules expected to change:
+- components/admin-final/Auth.tsx
+- components/admin-final/CRM.tsx
+- components/admin-final/Dialer.tsx
+- constants-admin-final.ts
+- portals/AdminPortal.tsx
+- services/admin-final/audioUtils.ts
+- services/admin-final/blandService.ts
+- services/admin-final/db.ts
+- services/admin-final/geminiService.ts
+- components/admin-final/WebCall.tsx
+- services/admin-final/geminiLiveService.ts
+- supabaseClient.ts
+- .hintrc
+
+Risks or things to watch out for:
+- Ensure all necessary files are included.
+
+WORK CHECKLIST
+
+- [ ] Stage files
+- [ ] Commit files
+

@@ -1,13 +1,16 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import Dialer from '../components/admin-final/Dialer';
 import CRM from '../components/admin-final/CRM';
+import Auth from '../components/admin-final/Auth';
 import { Lead, CallState, Recording, User, Property, AgentPersona, UserRole, Task } from '../types-admin-final';
 import { geminiClient } from '../services/admin-final/geminiService';
 import { blandService } from '../services/admin-final/blandService';
-import { Download, Save, Trash2, X, AlertCircle, Loader2 } from 'lucide-react';
+import { Download, Save, Trash2, X, AlertCircle, Loader2, Phone, LayoutDashboard, User as UserIcon, Settings, Menu } from 'lucide-react';
 import { db } from '../services/admin-final/db';
-import { DEFAULT_AGENT_PERSONA } from '../constants-admin-final';
+import { DEFAULT_AGENT_PERSONA, generateSystemPrompt } from '../constants-admin-final';
+import { supabase } from '../supabaseClient';
 
 interface PendingRec {
   url: string;
@@ -15,29 +18,24 @@ interface PendingRec {
   timestamp: number;
 }
 
-const DEFAULT_USER: User = {
-  id: 'demo-broker',
-  name: 'Laurent De Wilde',
-  email: 'laurent@eburon.com',
-  role: 'BROKER',
-  avatar: 'https://ui-avatars.com/api/?name=Laurent+De+Wilde&background=random'
-};
-
 const AdminPortal: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(DEFAULT_USER);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [callState, setCallState] = useState<CallState>(CallState.IDLE);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showMobileDialer, setShowMobileDialer] = useState(false);
   const [audioVols, setAudioVols] = useState<{in: number, out: number}>({in: 0, out: 0});
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<number>(0);
   const [pendingRecording, setPendingRecording] = useState<PendingRec | null>(null);
   const [recordingOutcome, setRecordingOutcome] = useState<'connected' | 'missed' | 'voicemail' | 'follow_up' | 'closed'>('connected');
   
+  // Mobile Navigation State
+  const [mobileTab, setMobileTab] = useState<'dialer' | 'leads' | 'admin' | 'settings'>('dialer');
+
   // Track the actual API Call ID
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   
@@ -47,6 +45,7 @@ const AdminPortal: React.FC = () => {
   // Agent Config State
   const [agents, setAgents] = useState<AgentPersona[]>([]);
   const [agentPersona, setAgentPersona] = useState<AgentPersona>(DEFAULT_AGENT_PERSONA);
+  const [crmTab, setCrmTab] = useState<string>('dashboard');
 
   // Refs for Ringing Logic
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
@@ -54,6 +53,26 @@ const AdminPortal: React.FC = () => {
   
   // Bland AI Monitoring Socket
   const [monitorWs, setMonitorWs] = useState<WebSocket | null>(null);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const userProfile = await db.getUserProfile(session.user.id);
+          if (userProfile) {
+            setCurrentUser(userProfile);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+    checkSession();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -75,36 +94,28 @@ const AdminPortal: React.FC = () => {
     };
   }, []);
 
-  const [isLoadingData, setIsLoadingData] = useState(true);
-
   useEffect(() => {
     if (currentUser) {
         const fetchData = async () => {
-            try {
-                const [fetchedLeads, fetchedProperties, fetchedTasks, fetchedAgents] = await Promise.all([
-                    db.getLeads(),
-                    db.getProperties(),
-                    db.getTasks(),
-                    db.getAgents()
-                ]);
-                setLeads(fetchedLeads);
-                setProperties(fetchedProperties);
-                setTasks(fetchedTasks);
-                
-                // Setup agents list and ensure default is present
-                let allAgents = fetchedAgents;
-                if (fetchedAgents.length === 0) {
-                    allAgents = [DEFAULT_AGENT_PERSONA];
-                    // Optionally save default if DB was empty
-                    db.createAgent(DEFAULT_AGENT_PERSONA);
-                }
-                setAgents(allAgents);
-                setAgentPersona(allAgents[0]); // Default to first agent
-            } catch (error) {
-                console.error("Failed to fetch admin data", error);
-            } finally {
-                setIsLoadingData(false);
+            const [fetchedLeads, fetchedProperties, fetchedTasks, fetchedAgents] = await Promise.all([
+                db.getLeads(),
+                db.getProperties(),
+                db.getTasks(),
+                db.getAgents()
+            ]);
+            setLeads(fetchedLeads);
+            setProperties(fetchedProperties);
+            setTasks(fetchedTasks);
+            
+            // Setup agents list and ensure default is present
+            let allAgents = fetchedAgents;
+            if (fetchedAgents.length === 0) {
+                allAgents = [DEFAULT_AGENT_PERSONA];
+                // Optionally save default if DB was empty
+                db.createAgent(DEFAULT_AGENT_PERSONA);
             }
+            setAgents(allAgents);
+            setAgentPersona(allAgents[0]); // Default to first agent
         };
         fetchData();
     }
@@ -112,6 +123,10 @@ const AdminPortal: React.FC = () => {
 
   const handleLeadSelect = (lead: Lead | null) => {
     setActiveLead(lead);
+    // On mobile, if a lead is selected from the Leads tab, switch to dialer to call them
+    if (isMobile && lead) {
+        setMobileTab('dialer');
+    }
   };
 
   const handleUpdateLead = async (updatedLead: Lead) => {
@@ -161,16 +176,18 @@ const AdminPortal: React.FC = () => {
     setCallState(CallState.RINGING);
     setPendingRecording(null); // Reset prev recording
     
-    // 2. Play Ringtone
+    // 2. Play Ringtone (Non-blocking with robust error handling)
     const ringAudio = new Audio('https://botsrhere.online/deontic/callerpro/ring.mp3');
     ringAudio.loop = true;
     ringtoneRef.current = ringAudio;
     
-    try {
-        await ringAudio.play();
-    } catch(e) {
-        console.error("Audio play failed", e);
-    }
+    // Don't await the play() promise to avoid blocking the call initiation
+    // Catch 'AbortError' specifically which happens if we pause() quickly (e.g. user hangs up)
+    ringAudio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+             console.error("Audio play failed", e);
+        }
+    });
 
     // 3. Initiate Call via Bland AI Service
     try {
@@ -208,7 +225,9 @@ const AdminPortal: React.FC = () => {
     } catch (e) {
         console.error("Failed to connect call", e);
         if (ringtoneRef.current) {
-            ringtoneRef.current.pause();
+            try {
+                ringtoneRef.current.pause();
+            } catch (err) { /* ignore cleanup error */ }
             ringtoneRef.current = null;
         }
         setCallState(CallState.ERROR);
@@ -272,7 +291,9 @@ const AdminPortal: React.FC = () => {
   const handleEndCall = async () => {
     // Cleanup Ringtone if active
     if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
+        try {
+            ringtoneRef.current.pause();
+        } catch (e) { /* ignore */ }
         ringtoneRef.current = null;
     }
     if (ringTimeoutRef.current) {
@@ -357,107 +378,209 @@ const AdminPortal: React.FC = () => {
       setCurrentCallId(null);
   };
 
-  const handleLogout = () => {
-      if (window.confirm("Are you sure you want to sign out? (Demo: This will reset the session)")) {
-          setCurrentUser(DEFAULT_USER);
-          window.location.reload(); 
+  const handleLogout = async () => {
+      if (window.confirm("Are you sure you want to sign out?")) {
+          await supabase.auth.signOut();
+          setCurrentUser(null);
       }
   };
 
-  if (!currentUser || isLoadingData) {
-      return (
-        <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-50 text-slate-400 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-            <span className="font-medium text-sm">Loading Admin Portal...</span>
-        </div>
-      );
+  const handleLogin = (user: User) => {
+      setCurrentUser(user);
+  };
+
+  // Show loading during session check
+  if (isCheckingSession) {
+      return <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-400">Loading...</div>;
   }
+
+  // Show Auth component if not authenticated
+  if (!currentUser) {
+      return <Auth onLogin={handleLogin} />;
+  }
+
+  // --- MOBILE COMPONENTS ---
+
+  const MobileNavBar = () => (
+      <div className="bg-white border-t border-slate-200 px-4 py-2 flex justify-between items-center fixed bottom-0 left-0 right-0 z-50 h-16 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+          <button 
+            onClick={() => setMobileTab('dialer')} 
+            className={`flex flex-col items-center gap-1 ${mobileTab === 'dialer' ? 'text-emerald-600' : 'text-slate-400'}`}
+          >
+              <Phone className="w-6 h-6" fill={mobileTab === 'dialer' ? 'currentColor' : 'none'}/>
+              <span className="text-[10px] font-medium">Dialer</span>
+          </button>
+          <button 
+            onClick={() => setMobileTab('leads')} 
+            className={`flex flex-col items-center gap-1 ${mobileTab === 'leads' ? 'text-emerald-600' : 'text-slate-400'}`}
+          >
+              <UserIcon className="w-6 h-6"/>
+              <span className="text-[10px] font-medium">Leads</span>
+          </button>
+          <button 
+            onClick={() => setMobileTab('admin')} 
+            className={`flex flex-col items-center gap-1 ${mobileTab === 'admin' ? 'text-emerald-600' : 'text-slate-400'}`}
+          >
+              <LayoutDashboard className="w-6 h-6"/>
+              <span className="text-[10px] font-medium">Admin</span>
+          </button>
+          <button 
+             onClick={() => setMobileTab('settings')}
+             className={`flex flex-col items-center gap-1 ${mobileTab === 'settings' ? 'text-emerald-600' : 'text-slate-400'}`}
+          >
+              <Settings className="w-6 h-6"/>
+              <span className="text-[10px] font-medium">Settings</span>
+          </button>
+      </div>
+  );
 
   return (
     <div className="h-screen w-screen overflow-hidden flex relative bg-slate-50">
       
-      {/* Desktop CRM Layout */}
+      {/* Desktop Layout */}
       {!isMobile && (
-        <div className="flex-1 h-full min-w-0">
-            <CRM 
-                leads={leads} 
-                properties={properties} 
-                onSelectLead={handleLeadSelect}
-                selectedLeadId={activeLead?.id || null}
-                onUpdateLead={handleUpdateLead}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                agentPersona={agentPersona}
-                onUpdateAgentPersona={setAgentPersona}
-                onSwitchUser={handleSwitchUser}
-                tasks={tasks}
-                onUpdateTask={handleUpdateTask}
-                agents={agents}
-                onAgentsChange={setAgents}
-            />
-        </div>
+        <>
+            <div className="flex-1 h-full min-w-0">
+                <CRM 
+                    leads={leads} 
+                    properties={properties} 
+                    onSelectLead={handleLeadSelect}
+                    selectedLeadId={activeLead?.id || null}
+                    onUpdateLead={handleUpdateLead}
+                    currentUser={currentUser}
+                    onLogout={handleLogout}
+                    agentPersona={agentPersona}
+                    onUpdateAgentPersona={setAgentPersona}
+                    onSwitchUser={handleSwitchUser}
+                    tasks={tasks}
+                    onUpdateTask={handleUpdateTask}
+                    agents={agents}
+                    onAgentsChange={setAgents}
+                    onTabChange={(t) => setCrmTab(t)}
+                />
+            </div>
+            {crmTab !== 'web-call' && (
+            <div className='w-[420px] h-full border-l border-slate-200 bg-white shadow-2xl relative z-40 p-8 flex items-center justify-center shrink-0'>
+                <div className='w-[360px] h-[720px] transition-all'>
+                    <Dialer 
+                        callState={callState}
+                        onCallStart={startCall}
+                        onCallEnd={handleEndCall}
+                        activeLeadName={activeLead ? `${activeLead.firstName} ${activeLead.lastName}` : undefined}
+                        activeLeadPhone={activeLead?.phone}
+                        inputVolume={audioVols.in}
+                        outputVolume={audioVols.out}
+                        onToggleRecording={toggleRecording}
+                        isRecording={isRecording}
+                        leads={leads}
+                        onLeadSelected={(lead) => handleLeadSelect(lead)}
+                        agents={agents}
+                        selectedAgentId={agentPersona.id || 'default'}
+                        onSelectAgent={handleSelectAgent}
+                    />
+                </div>
+            </div>
+            )}
+        </>
       )}
 
-      {/* Mobile CRM Layout (Full Width) */}
+      {/* Mobile Layout */}
       {isMobile && (
-         <div className="flex-1 h-full min-w-0">
-            <CRM 
-                leads={leads} 
-                properties={properties} 
-                onSelectLead={handleLeadSelect}
-                selectedLeadId={activeLead?.id || null}
-                onUpdateLead={handleUpdateLead}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                agentPersona={agentPersona}
-                onUpdateAgentPersona={setAgentPersona}
-                onSwitchUser={handleSwitchUser}
-                tasks={tasks}
-                onUpdateTask={handleUpdateTask}
-                agents={agents}
-                onAgentsChange={setAgents}
-                onToggleDialer={() => setShowMobileDialer(true)}
-            />
-         </div>
+          <div className="flex flex-col w-full h-full pb-16">
+              
+              {/* DIALER TAB */}
+              <div className={`flex-1 overflow-hidden ${mobileTab === 'dialer' ? 'block' : 'hidden'}`}>
+                  <Dialer 
+                        callState={callState}
+                        onCallStart={startCall}
+                        onCallEnd={handleEndCall}
+                        activeLeadName={activeLead ? `${activeLead.firstName} ${activeLead.lastName}` : undefined}
+                        activeLeadPhone={activeLead?.phone}
+                        inputVolume={audioVols.in}
+                        outputVolume={audioVols.out}
+                        onToggleRecording={toggleRecording}
+                        isRecording={isRecording}
+                        leads={leads}
+                        onLeadSelected={(lead) => handleLeadSelect(lead)}
+                        agents={agents}
+                        selectedAgentId={agentPersona.id || 'default'}
+                        onSelectAgent={handleSelectAgent}
+                    />
+              </div>
+
+              {/* ADMIN / CRM TAB */}
+              <div className={`flex-1 overflow-hidden ${mobileTab === 'admin' ? 'block' : 'hidden'}`}>
+                  <CRM 
+                        leads={leads} 
+                        properties={properties} 
+                        onSelectLead={handleLeadSelect}
+                        selectedLeadId={activeLead?.id || null}
+                        onUpdateLead={handleUpdateLead}
+                        currentUser={currentUser}
+                        onLogout={handleLogout}
+                        agentPersona={agentPersona}
+                        onUpdateAgentPersona={setAgentPersona}
+                        onSwitchUser={handleSwitchUser}
+                        tasks={tasks}
+                        onUpdateTask={handleUpdateTask}
+                        agents={agents}
+                        onAgentsChange={setAgents}
+                    />
+              </div>
+
+              {/* LEADS TAB (Simplified View or reuse CRM leads tab logic) */}
+              <div className={`flex-1 overflow-hidden ${mobileTab === 'leads' ? 'block' : 'hidden'}`}>
+                  {/* Reuse CRM but force 'leads' tab view internally? 
+                      Or simpler, just render the list here. Let's reuse CRM for consistency but we need to tell it to show Leads.
+                      Since CRM controls its own tab state, we might just mount a fresh instance or
+                      pass a prop to force initial tab. For simplicity, we can just use the Admin tab and instruct user 
+                      to navigate, BUT user asked for specific tabs.
+                      Let's render a specific Lead List here for mobile speed.
+                   */}
+                   <div className="h-full bg-slate-50 p-4 overflow-y-auto">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-4">Leads</h2>
+                        <div className="space-y-3">
+                            {leads.map(lead => (
+                                <div 
+                                    key={lead.id} 
+                                    onClick={() => handleLeadSelect(lead)}
+                                    className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 active:bg-slate-50"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-slate-900">{lead.firstName} {lead.lastName}</h3>
+                                            <p className="text-sm text-slate-500">{lead.phone}</p>
+                                        </div>
+                                        <span className="px-2 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded">{lead.status}</span>
+                                    </div>
+                                    <div className="mt-3 flex gap-2">
+                                        <button className="flex-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1">
+                                            <Phone className="w-3 h-3"/> Call
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                   </div>
+              </div>
+
+              {/* SETTINGS TAB */}
+              <div className={`flex-1 overflow-hidden p-6 bg-slate-50 ${mobileTab === 'settings' ? 'block' : 'hidden'}`}>
+                   <h2 className="text-2xl font-bold text-slate-800 mb-6">Settings</h2>
+                   <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                       <button onClick={handleLogout} className="w-full text-left px-4 py-4 text-red-600 font-bold flex items-center gap-2 hover:bg-red-50">
+                           <LayoutDashboard className="w-5 h-5"/> Sign Out
+                       </button>
+                   </div>
+                   <div className="mt-4 text-center text-xs text-slate-400">
+                       Eburon Mobile v1.0.0
+                   </div>
+              </div>
+
+              {/* Bottom Nav */}
+              <MobileNavBar />
+          </div>
       )}
-
-      {/* Phone Overlay / Sidebar */}
-      <div className={`
-        transition-all duration-500 ease-in-out shrink-0
-        ${isMobile 
-            ? `fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 ${showMobileDialer ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}` 
-            : 'w-[420px] h-full border-l border-slate-200 bg-white shadow-2xl relative z-40 p-8 flex items-center justify-center'
-        }
-      `}>
-         {/* Close Button for Mobile Overlay */}
-         {isMobile && (
-             <button 
-                onClick={() => setShowMobileDialer(false)}
-                className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-lg text-slate-500 hover:text-slate-800 z-50"
-             >
-                 <X className="w-6 h-6" />
-             </button>
-         )}
-
-         <div className={`${isMobile ? 'w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden h-[80vh]' : 'w-[360px] h-[720px]'} transition-all relative`}>
-            <Dialer 
-                callState={callState}
-                onCallStart={startCall}
-                onCallEnd={handleEndCall}
-                activeLeadName={activeLead ? `${activeLead.firstName} ${activeLead.lastName}` : undefined}
-                activeLeadPhone={activeLead?.phone}
-                inputVolume={audioVols.in}
-                outputVolume={audioVols.out}
-                onToggleRecording={toggleRecording}
-                isRecording={isRecording}
-                leads={leads}
-                onLeadSelected={(lead) => handleLeadSelect(lead)}
-                agents={agents}
-                selectedAgentId={agentPersona.id || 'default'}
-                onSelectAgent={handleSelectAgent}
-            />
-         </div>
-      </div>
 
       {/* Loading Overlay for Recording Fetch */}
       {isFetchingRecording && (

@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Lead, Property, User, Ticket, Invoice, AgentPersona, UserRole, Document, Task } from '../types';
-import { MOCK_NOTIFICATIONS, MOCK_DOCUMENTS, MOCK_EMAILS, MOCK_CAMPAIGNS, AVAILABLE_VOICES, DEFAULT_AGENT_PERSONA } from '../constants';
-import { db } from '../services/db';
+import WebCall from './WebCall';
+import { Lead, Property, User, Ticket, Invoice, AgentPersona, UserRole, Document, Task } from '../../types-admin-final';
+import { MOCK_NOTIFICATIONS, MOCK_DOCUMENTS, MOCK_EMAILS, MOCK_CAMPAIGNS, AVAILABLE_VOICES, DEFAULT_AGENT_PERSONA } from '../../constants-admin-final';
+import { db } from '../../services/admin-final/db';
 import { 
   User as UserIcon, Phone, Mail, Clock, MapPin, DollarSign, Home, CheckCircle, 
   ChevronRight, Search, Play, Pause, X, Send, PhoneIncoming, 
@@ -28,15 +29,21 @@ interface CRMProps {
   onUpdateTask: (task: Task) => void;
   agents: AgentPersona[];
   onAgentsChange: (agents: AgentPersona[]) => void;
+  onTabChange?: (tab: TabType) => void;
 }
 
-type TabType = 'dashboard' | 'leads' | 'properties' | 'notifications' | 'calendar' | 'documents' | 'finance' | 'marketing' | 'analytics' | 'settings' | 'maintenance' | 'requests' | 'my-home' | 'jobs' | 'schedule' | 'invoices' | 'agent-config' | 'inbox' | 'tasks';
+type TabType = 'dashboard' | 'leads' | 'properties' | 'notifications' | 'calendar' | 'documents' | 'finance' | 'marketing' | 'analytics' | 'settings' | 'maintenance' | 'requests' | 'my-home' | 'jobs' | 'schedule' | 'invoices' | 'agent-config' | 'inbox' | 'tasks' | 'web-call';
 
 const CRM: React.FC<CRMProps> = ({ 
     leads, properties, onSelectLead, selectedLeadId, onUpdateLead, currentUser, onLogout,
-    agentPersona, onUpdateAgentPersona, onSwitchUser, tasks, onUpdateTask, agents, onAgentsChange
+    agentPersona, onUpdateAgentPersona, onSwitchUser, tasks, onUpdateTask, agents, onAgentsChange, onTabChange
 }) => {
   const [tab, setTab] = useState<TabType>('dashboard');
+
+  const handleSetTab = (t: TabType) => {
+    setTab(t);
+    onTabChange?.(t);
+  };
   const [noteInput, setNoteInput] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -91,7 +98,7 @@ const CRM: React.FC<CRMProps> = ({
 
   const NavItem = ({ id, label, icon: Icon, badge }: { id: TabType, label: string, icon: any, badge?: string }) => (
     <button 
-        onClick={() => setTab(id)}
+        onClick={() => handleSetTab(id)}
         className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 relative group overflow-hidden ${
           tab === id ? 'bg-black 50 text-white 700' : 'text-slate-600 hover:bg-slate-50'
         } ${isSidebarCollapsed ? 'justify-center' : ''}`}
@@ -234,6 +241,7 @@ const CRM: React.FC<CRMProps> = ({
                   {/* Quick Load Dropdown */}
                   <div className="mb-6 flex items-center justify-end">
                       <select 
+                        aria-label="Quick Load Persona"
                         className="bg-slate-50 border border-slate-200 text-slate-600 text-sm rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
                         onChange={(e) => {
                              // This relies on parent passing logic or direct import. 
@@ -349,15 +357,15 @@ const CRM: React.FC<CRMProps> = ({
                               <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
                                   <div>
                                       <label className="block text-xs font-bold text-slate-500 mb-1">Model</label>
-                                      <input type="text" value={editPersona.model || 'base'} readOnly className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-500"/>
+                                      <input type="text" value={editPersona.model || 'base'} readOnly aria-label="Model" className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-500"/>
                                   </div>
                                   <div>
                                       <label className="block text-xs font-bold text-slate-500 mb-1">Tools</label>
-                                      <input type="text" value={editPersona.tools?.join(', ') || ''} readOnly className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-500"/>
+                                      <input type="text" value={editPersona.tools?.join(', ') || ''} readOnly aria-label="Tools" className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-500"/>
                                   </div>
                                   <div>
                                       <label className="block text-xs font-bold text-slate-500 mb-1">Temperature</label>
-                                      <input type="text" value="0.6" readOnly className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-500"/>
+                                      <input type="text" value="0.6" readOnly aria-label="Temperature" className="w-full px-3 py-2 bg-white border border-slate-200 rounded text-sm text-slate-500"/>
                                   </div>
                               </div>
                           )}
@@ -804,8 +812,9 @@ const CRM: React.FC<CRMProps> = ({
                         <NavItem id="finance" label="Finance" icon={Receipt} />
                         <NavItem id="marketing" label="Marketing" icon={Megaphone} />
                         <NavItem id="analytics" label="Analytics" icon={PieChart} />
+                        <NavItem id="agent-config" label="Agent Config" icon={Bot} />
+                        <NavItem id="web-call" label="Web Call (Gemini)" icon={Mic} badge="New" />
                     </div>
-                    <div className="px-3 mt-4"><NavItem id="agent-config" label="Agent Config" icon={Bot} /></div>
                 </>
              )}
              
@@ -863,6 +872,7 @@ const CRM: React.FC<CRMProps> = ({
                     {tab === 'dashboard' && <DashboardView />}
                     {tab === 'inbox' && <InboxView />}
                     {tab === 'agent-config' && <AgentConfigView />}
+                    {tab === 'web-call' && <WebCall />}
                     {tab === 'marketing' && <MarketingView />}
                     {tab === 'analytics' && <AnalyticsView />}
                     {tab === 'documents' && <DocumentsView />}

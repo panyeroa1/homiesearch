@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Phone, Mic, MicOff, PhoneOff, Disc, Delete, Search, User, X, Check, Bot } from 'lucide-react';
-import { CallState, Lead, AgentPersona } from '../types';
+import { CallState, Lead, AgentPersona } from '../../types-admin-final';
 
 interface DialerProps {
   callState: CallState;
@@ -284,6 +284,7 @@ const Dialer: React.FC<DialerProps> = ({
                     type="text" 
                     value={dialNumber}
                     readOnly
+                    aria-label="Dialed Number"
                     className="bg-transparent text-4xl text-center font-semibold text-slate-900 w-full focus:outline-none tracking-tight mb-2 h-12"
                     placeholder=""
                 />

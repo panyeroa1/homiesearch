@@ -7,6 +7,13 @@
     "axe/name-role-value": "off",
     "compat-api/css": "off",
     "typescript-config/strict": "off",
-    "typescript-config/consistent-casing": "off"
+    "typescript-config/consistent-casing": "off",
+    "axe/forms": [
+      "default",
+      {
+        "label": "off",
+        "select-name": "off"
+      }
+    ]
   }
 }

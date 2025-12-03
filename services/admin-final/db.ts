@@ -1,34 +1,13 @@
 
-import { supabase } from '../../services/supabase';
+import { supabase } from '../../supabaseClient';
 import { Lead, Property, Ticket, User, UserRole, Task, AgentPersona } from '../../types-admin-final';
 import { MOCK_LEADS, MOCK_PROPERTIES, DEFAULT_AGENT_PERSONA } from '../../constants-admin-final';
 
 // MOCK DATA FALLBACKS (In case DB tables don't exist yet)
-// Helper to load from localStorage or use default
-const loadFromStorage = <T>(key: string, defaultData: T): T => {
-    try {
-        const stored = localStorage.getItem(key);
-        if (stored) return JSON.parse(stored);
-        localStorage.setItem(key, JSON.stringify(defaultData));
-        return defaultData;
-    } catch (e) {
-        return defaultData;
-    }
-};
-
-const saveToStorage = (key: string, data: any) => {
-    try {
-        localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-        console.error(`Failed to save to localStorage: ${key}`, e);
-    }
-};
-
-let localLeads = loadFromStorage<Lead[]>('admin_leads', [...MOCK_LEADS]);
-let localProperties = loadFromStorage<Property[]>('admin_properties', [...MOCK_PROPERTIES]);
-let localAgents = loadFromStorage<AgentPersona[]>('admin_agents', [DEFAULT_AGENT_PERSONA]);
-
-const DEFAULT_TICKETS: Ticket[] = [
+let localLeads = [...MOCK_LEADS];
+let localProperties = [...MOCK_PROPERTIES];
+let localAgents = [DEFAULT_AGENT_PERSONA];
+let localTickets: Ticket[] = [
   {
     id: 't1', title: 'Leaking Faucet', description: 'Kitchen sink dripping constantly.', 
     status: 'OPEN', priority: 'MEDIUM', propertyId: '101', propertyAddress: 'Kouter 12, 9000 Gent', 
@@ -40,13 +19,10 @@ const DEFAULT_TICKETS: Ticket[] = [
     createdBy: 'u2', createdAt: new Date(Date.now() - 86400000).toISOString(), assignedTo: 'c1'
   }
 ];
-let localTickets = loadFromStorage<Ticket[]>('admin_tickets', DEFAULT_TICKETS);
-
-const DEFAULT_TASKS: Task[] = [
+let localTasks: Task[] = [
     { id: 'tk1', title: 'Prepare Contract for Sophie', dueDate: new Date(Date.now() + 86400000).toISOString(), completed: false, leadId: '1', leadName: 'Sophie Dubois', priority: 'HIGH' },
     { id: 'tk2', title: 'Follow up on inspection', dueDate: new Date(Date.now() + 172800000).toISOString(), completed: false, priority: 'MEDIUM' }
 ];
-let localTasks = loadFromStorage<Task[]>('admin_tasks', DEFAULT_TASKS);
 
 export const db = {
   // --- USERS ---
@@ -84,7 +60,6 @@ export const db = {
     try {
       // Optimistic local update
       localLeads = localLeads.map(l => l.id === lead.id ? lead : l);
-      saveToStorage('admin_leads', localLeads);
       
       const { error } = await supabase.from('leads').upsert(lead);
       if (error) throw error;
@@ -118,7 +93,6 @@ export const db = {
   async updateTicket(ticket: Ticket) {
     try {
        localTickets = localTickets.map(t => t.id === ticket.id ? ticket : t);
-       saveToStorage('admin_tickets', localTickets);
        await supabase.from('tickets').upsert(ticket);
     } catch (e) {
        console.warn('DB: Update Ticket failed, using local state');
@@ -127,7 +101,6 @@ export const db = {
 
   async createTicket(ticket: Ticket) {
       localTickets.push(ticket);
-      saveToStorage('admin_tickets', localTickets);
       try {
           await supabase.from('tickets').insert(ticket);
       } catch (e) {}
@@ -146,7 +119,6 @@ export const db = {
 
   async createTask(task: Task) {
       localTasks.push(task);
-      saveToStorage('admin_tasks', localTasks);
       try {
           await supabase.from('tasks').insert(task);
       } catch(e) {
@@ -156,7 +128,6 @@ export const db = {
 
   async updateTask(task: Task) {
       localTasks = localTasks.map(t => t.id === task.id ? task : t);
-      saveToStorage('admin_tasks', localTasks);
       try {
           await supabase.from('tasks').upsert(task);
       } catch(e) {}
@@ -180,7 +151,6 @@ export const db = {
       } else {
           localAgents.push(agent);
       }
-      saveToStorage('admin_agents', localAgents);
 
       try {
           await supabase.from('agents').upsert(agent);

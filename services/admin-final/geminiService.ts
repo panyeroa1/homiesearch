@@ -29,8 +29,8 @@ export class GeminiLiveClient {
   async connect(customSystemPrompt?: string) {
     this.disconnect(); // Clean up existing
 
-    // Initialize AI Client here to ensure we get the latest process.env.API_KEY
-    const apiKey = process.env.API_KEY || '';
+    // Initialize AI Client here to ensure we get the latest API Key
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
     if (!apiKey) {
         console.error("API_KEY is missing in process.env");
     }
