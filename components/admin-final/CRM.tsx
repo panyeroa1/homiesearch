@@ -813,7 +813,7 @@ const CRM: React.FC<CRMProps> = ({
                         <NavItem id="marketing" label="Marketing" icon={Megaphone} />
                         <NavItem id="analytics" label="Analytics" icon={PieChart} />
                         <NavItem id="agent-config" label="Agent Config" icon={Bot} />
-                        <NavItem id="web-call" label="Web Call (Gemini)" icon={Mic} badge="New" />
+                        <NavItem id="web-call" label="Inbound" icon={Mic} badge="New" />
                     </div>
                 </>
              )}
