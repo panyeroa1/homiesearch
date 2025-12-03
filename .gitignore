@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Documentation (local only)
+important.md
+IMPORTANT.md
+tasks.md
