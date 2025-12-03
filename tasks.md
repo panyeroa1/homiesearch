@@ -204,3 +204,52 @@ Test result:
 Known limitations or follow-up tasks:
 - None
 
+
+------------------------------------------------------------
+
+Task ID: T-0003
+Title: Add IMPORTANT.md Ground Rules
+Status: DONE
+Owner: Miles
+Related repo or service: homiesearch-5
+Branch: main
+Created: 2025-12-03 22:20
+Last updated: 2025-12-03 22:20
+
+START LOG
+
+Timestamp: 2025-12-03 22:20
+Current behavior or state:
+- The repository has an empty `important.md`.
+- No content defining engineering ground rules.
+
+Plan and scope for this task:
+- Update `important.md` with the content provided by the user.
+
+Files or modules expected to change:
+- important.md
+
+Risks or things to watch out for:
+- None.
+
+WORK CHECKLIST
+
+- [x] Update important.md
+
+END LOG
+
+Timestamp: 2025-12-03 22:20
+Summary of what actually changed:
+- Updated `important.md` with the Eburon Engineering Ground Rules.
+
+Files actually modified:
+- important.md
+
+How it was tested:
+- Manual verification of file content.
+
+Test result:
+- PASS
+
+Known limitations or follow-up tasks:
+- None
